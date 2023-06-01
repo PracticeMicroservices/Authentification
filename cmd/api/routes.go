@@ -17,9 +17,11 @@ type App struct {
 	Models         models.Models
 }
 
-func NewApp() *App {
+func NewApp(db *sql.DB) *App {
 	return &App{
 		Authentication: controllers.NewAuthenticationController(),
+		DB:             db,
+		Models:         models.New(db),
 	}
 }
 
