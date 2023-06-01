@@ -55,6 +55,7 @@ func (a *authenticationController) Authenticate(w http.ResponseWriter, r *http.R
 	response := &helpers.JsonResponse{
 		Error:   false,
 		Message: fmt.Sprintf("Logged in user %s", user.User.Email),
+		Data:    user.User,
 	}
 	_ = response.WriteJSON(w, http.StatusOK, nil)
 }
