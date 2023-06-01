@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -26,8 +27,8 @@ func New(dbPool *sql.DB) Models {
 
 type Models interface {
 	GetAll() ([]*entities.User, error)
-	GetByEmail(email string) (*entities.User, error)
-	GetOne(id int) (*entities.User, error)
+	GetByEmail(email string) (*userModels, error)
+	GetOne(id int) (*userModels, error)
 	Insert(user entities.User) (int, error)
 	Update() error
 	DeleteByID(id int) error
@@ -83,59 +84,57 @@ func (u *userModels) GetAll() ([]*entities.User, error) {
 }
 
 // GetByEmail returns one user by email
-func (u *userModels) GetByEmail(email string) (*entities.User, error) {
+func (u *userModels) GetByEmail(email string) (*userModels, error) {
+	fmt.Println("GetByEmail", email)
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
 	query := `select id, email, first_name, last_name, password, user_active, created_at, updated_at from users where email = $1`
-
-	var user entities.User
 	row := db.QueryRowContext(ctx, query, email)
-
+	fmt.Println("row", row)
 	err := row.Scan(
-		&user.ID,
-		&user.Email,
-		&user.FirstName,
-		&user.LastName,
-		&user.Password,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		&u.User.ID,
+		&u.User.Email,
+		&u.User.FirstName,
+		&u.User.LastName,
+		&u.User.Password,
+		&u.User.Active,
+		&u.User.CreatedAt,
+		&u.User.UpdatedAt,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return u, nil
 }
 
 // GetOne returns one user by id
-func (u *userModels) GetOne(id int) (*entities.User, error) {
+func (u *userModels) GetOne(id int) (*userModels, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
 	query := `select id, email, first_name, last_name, password, user_active, created_at, updated_at from users where id = $1`
 
-	var user entities.User
 	row := db.QueryRowContext(ctx, query, id)
 
 	err := row.Scan(
-		&user.ID,
-		&user.Email,
-		&user.FirstName,
-		&user.LastName,
-		&user.Password,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		&u.User.ID,
+		&u.User.Email,
+		&u.User.FirstName,
+		&u.User.LastName,
+		&u.User.Password,
+		&u.User.Active,
+		&u.User.CreatedAt,
+		&u.User.UpdatedAt,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return u, nil
 }
 
 // Update updates one user in the database, using the information

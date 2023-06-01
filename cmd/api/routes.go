@@ -2,7 +2,6 @@ package main
 
 import (
 	"authentification/cmd/api/controllers"
-	"authentification/data/models"
 	"database/sql"
 	"net/http"
 
@@ -14,14 +13,12 @@ import (
 type App struct {
 	Authentication controllers.Authentication
 	DB             *sql.DB
-	Models         models.Models
 }
 
 func NewApp(db *sql.DB) *App {
 	return &App{
-		Authentication: controllers.NewAuthenticationController(),
+		Authentication: controllers.NewAuthenticationController(db),
 		DB:             db,
-		Models:         models.New(db),
 	}
 }
 
@@ -37,5 +34,7 @@ func (a *App) routes() http.Handler {
 		MaxAge:           300,
 	}))
 	mux.Use(middleware.Heartbeat("/healthCheck"))
-	return nil
+
+	mux.Post("/authentication", a.Authentication.Authenticate)
+	return mux
 }
