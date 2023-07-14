@@ -3,9 +3,13 @@ package controllers
 import (
 	"authentification/cmd/api/helpers"
 	"authentification/data/models"
+	"authentification/data/repository"
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -19,7 +23,8 @@ type requestPayload struct {
 }
 
 type authenticationController struct {
-	userModels models.Models
+	Client     *http.Client
+	userModels repository.Repository
 	json       *helpers.JsonResponse
 }
 
@@ -27,12 +32,11 @@ func NewAuthenticationController(db *sql.DB) Authentication {
 	return &authenticationController{
 		userModels: models.New(db),
 		json:       &helpers.JsonResponse{},
+		Client:     &http.Client{},
 	}
 }
 
 func (a *authenticationController) Authenticate(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Println("Authenticate")
 	payload := &requestPayload{}
 	err := helpers.ReadJSON(w, r, payload)
 	if err != nil {
@@ -45,17 +49,45 @@ func (a *authenticationController) Authenticate(w http.ResponseWriter, r *http.R
 		_ = a.json.WriteJSONError(w, errors.New("invalid credentials"), http.StatusBadRequest)
 		return
 	}
-	fmt.Println(user)
 
-	valid, err := user.PasswordMatches(payload.Password)
+	valid, err := a.userModels.PasswordMatches(payload.Password, *user)
 	if err != nil || !valid {
 		_ = a.json.WriteJSONError(w, errors.New("invalid credentials"), http.StatusBadRequest)
 		return
 	}
+
+	//log authentication
+	err = a.logRequest("authentication", fmt.Sprintf("user %s authenticated", user.Email))
+	if err != nil {
+		log.Println("error logging authentication request: ", err)
+	}
+
 	response := &helpers.JsonResponse{
 		Error:   false,
-		Message: fmt.Sprintf("Logged in user %s", user.User.Email),
-		Data:    user.User,
+		Message: fmt.Sprintf("Logged in user %s", user.Email),
+		Data:    user,
 	}
 	_ = response.WriteJSON(w, http.StatusOK, nil)
+}
+
+func (a *authenticationController) logRequest(name, data string) error {
+	var entry struct {
+		Name string `json:"name"`
+		Data string `json:"data"`
+	}
+
+	entry.Name = name
+	entry.Data = data
+
+	jsonData, _ := json.MarshalIndent(entry, "", "\t")
+	logServiceURL := "http://logger-service/logger"
+
+	req, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	_, err = a.Client.Do(req)
+
+	return err
+
 }

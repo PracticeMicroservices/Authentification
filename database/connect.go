@@ -30,7 +30,7 @@ func ConnectToDB() *sql.DB {
 	for {
 		connection, err := openDB(dsn)
 		if err != nil {
-			log.Println("Waiting for DB to start...")
+			log.Println("Waiting for DB to start...", err)
 			counts++
 		} else {
 			log.Println("DB started")
